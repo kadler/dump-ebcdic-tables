@@ -432,9 +432,9 @@ def dump_conv_table(ccsid, es):
 
 def write_conv_txt(table, file):
     if len(table) == 256:
-        fmt_str = "0x{:02x}\t0x{}\t# {}"
+        fmt_str = "0x{:02x}\t{}\t# {}"
     else:
-        fmt_str = "0x{:04x}\t0x{}\t# {}"
+        fmt_str = "0x{:04x}\t{}\t# {}"
 
     for cp, out in enumerate(table):
         try:
@@ -443,18 +443,24 @@ def write_conv_txt(table, file):
                 # skip unused code points which
                 # convert to a replacement character
                 continue
-            name = unicodedata.name(u)
-        except ValueError:
-            category = unicodedata.category(u)
-            if category == 'Cc':
-                name = '<control>'
-            else:
-                name = '<unknown>'
         except UnicodeDecodeError:
-            name = '<error>'
-            pass
+            print(f"Somehow got invalid UTF-16 for cp {cp:x}: {out.hex()}")
+            exit(1)
 
-        print(fmt_str.format(cp, out.hex(), name), file=file)
+        def get_name(c):
+            try:
+                return unicodedata.name(c)
+            except ValueError:
+                category = unicodedata.category(c)
+                if category == 'Cc':
+                    return '<control>'
+                else:
+                    return '<unknown>'
+
+        out_hex = " ".join(["0x"+out[i:i+2].hex() for i in range(0, len(out), 2)])
+        out_names = " + ".join([get_name(_) for _ in u])
+
+        print(fmt_str.format(cp, out_hex, out_names), file=file)
 
 
 CONTROL_CODES = {
@@ -638,9 +644,6 @@ for ccsid in range(1, 65535):
         # 0xff -> 0x9f and 0x90 -> 0xb0
         # and iconv of 0xff90 gives back 0x009f00b0
         es = 0x1100
-    if ccsid in (16684,):
-        # TODO: Need to handle multi-unicode character conversions
-        continue
     print(f"ccsid: {ccsid} {es:x}")
     table = dump_conv_table(ccsid, es)
     if table is None:
