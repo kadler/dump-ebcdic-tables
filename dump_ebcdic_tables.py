@@ -432,9 +432,9 @@ def dump_conv_table(ccsid, es):
 
 def write_conv_txt(table, file):
     if len(table) == 256:
-        fmt_str = "0x{:02x}\t0x{}\t{}"
+        fmt_str = "0x{:02x}\t0x{}\t# {}"
     else:
-        fmt_str = "0x{:04x}\t0x{}\t{}"
+        fmt_str = "0x{:04x}\t0x{}\t# {}"
 
     for cp, out in enumerate(table):
         try:
