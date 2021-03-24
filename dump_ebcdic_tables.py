@@ -439,6 +439,10 @@ def write_conv_txt(table, file):
     for cp, out in enumerate(table):
         try:
             u = out.decode('utf-16be')
+            if '\ufffd' in u:
+                # skip unused code points which
+                # convert to a replacement character
+                continue
             name = unicodedata.name(u)
         except ValueError:
             category = unicodedata.category(u)
@@ -559,6 +563,9 @@ th {{
 .invariant {{
     border: 2px solid;
 }}
+.unassigned {{
+    background-color: #EEEEEE;
+}}
 </style>
 <table id="ebcdic-table" border="1" frame="box">
 """
@@ -590,8 +597,10 @@ th {{
             u = out.decode('utf-16be')
 
             category = unicodedata.category(u)
-            if u == '\ufffd':
-                x = ''
+            if '\ufffd' in u:
+                # skip unused code points which
+                # convert to a replacement character
+                x = "<span class='unassigned'></span>"
             elif category == 'Cc':
                 n = CONTROL_CODES.get(u, '')
                 x = f"<span class='glyph'>{n}</span>"
