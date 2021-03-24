@@ -401,9 +401,14 @@ def get_encoding_scheme(ccsid):
 
 
 def dump_conv_table(ccsid, es):
-    cd = iconv_open(1200, ccsid)
+    to_ccsid = 1200
+    if ccsid == 57777:
+        # 57777 only supports conversion to 13488 and 1208
+        # since 13488 is basically 1200 anyway, we used that
+        to_ccsid = 13488
+
+    cd = iconv_open(to_ccsid, ccsid)
     if cd.rtn == -1:
-        print("Couldn't open converter")
         return
 
     if es == 0x1100:
@@ -617,11 +622,21 @@ for ccsid in range(1, 65535):
     es = get_encoding_scheme(ccsid)
     if es not in (0x1100, 0x1200):
         continue
-    if ccsid in (16684, 57777):
+    if ccsid == 57777:
+        # For some reason the system claims this to be a DBCS CCSID, but jt400
+        # treats it as SBCS and looking at the data that comes back, it does
+        # look like that's correct eg. according to ConvTable57777.java
+        # 0xff -> 0x9f and 0x90 -> 0xb0
+        # and iconv of 0xff90 gives back 0x009f00b0
+        es = 0x1100
+    if ccsid in (16684,):
         # TODO: Need to handle multi-unicode character conversions
         continue
     print(f"ccsid: {ccsid} {es:x}")
     table = dump_conv_table(ccsid, es)
+    if table is None:
+        print(f"Couldn't open converter for {ccsid}")
+        continue
     with open(f'IBM-{ccsid:03d}.txt', 'w') as conv_file:
         write_conv_txt(table, conv_file)
     if es != 0x1200:
